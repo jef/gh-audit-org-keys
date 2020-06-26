@@ -5,7 +5,6 @@ GOBIN=$(GOBASE)/bin/$(PROJECT_NAME)
 .DEFAULT_GOAL := build
 
 build:
-	make lint
 	go build -o $(GOBIN)
 
 build-docker:
@@ -26,12 +25,8 @@ hooks:
 install:
 	go mod download
 
-lint:
-	golint -set_exit_status
-
 production:
-	make vet
-	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o $(GOBIN)
 
 run:
 	make build
