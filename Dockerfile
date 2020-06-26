@@ -4,9 +4,6 @@ RUN apk update && apk --no-cache add make git
 
 WORKDIR /build
 
-ARG GITHUB_ORGANIZATION
-ARG GITHUB_PAT
-
 COPY go.mod go.mod
 COPY go.sum go.sum
 COPY main.go main.go
@@ -14,7 +11,10 @@ COPY Makefile Makefile
 
 RUN make production
 
-FROM scratch
+FROM alpine:3.11
+
+ENV GITHUB_ORGANIZATION=""
+ENV GITHUB_PAT=""
 
 WORKDIR /opt
 

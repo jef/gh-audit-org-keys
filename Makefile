@@ -8,13 +8,13 @@ build:
 	go build -o $(GOBIN)
 
 build-docker:
-	docker build \
-	--build-arg "GITHUB_ORGANIZATION=$(GITHUB_ORGANIZATION)" \
-	--build-arg "GITHUB_PAT=$(GITHUB_PAT)" \
-	-t $(PROJECT_NAME):local .
+	docker build -t $(PROJECT_NAME):local .
 
 clean:
 	rm -rf $(GOBIN)
+
+clean-docker:
+	docker rm -f $(PROJECT_NAME):local
 
 fmt:
 	go fmt
@@ -34,7 +34,10 @@ run:
 
 run-docker:
 	make build-docker
-	docker run --rm -it $(PROJECT_NAME):local
+	docker run --rm -it \
+	--env "GITHUB_ORGANIZATION=$(GITHUB_ORGANIZATION)" \
+	--env "GITHUB_PAT=$(GITHUB_PAT)" \
+	$(PROJECT_NAME):local
 
 test:
 	go test -v
