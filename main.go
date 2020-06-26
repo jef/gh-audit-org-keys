@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	githubUrl     = "https://github.com"
-	githubOrgsApi = "https://api.github.com/orgs"
+	githubURL     = "https://github.com"
+	githubOrgsAPI = "https://api.github.com/orgs"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 	githubPat = os.Getenv("GITHUB_PAT")
 )
 
-type Member struct {
+type member struct {
 	Login string `json:"login"`
 }
 
@@ -31,15 +31,15 @@ func main() {
 	getKeys(members)
 }
 
-func getKeys(members []Member) {
+func getKeys(members []member) {
 	client := &http.Client{}
 
-	var membersWithNoKey []Member
+	var membersWithNoKey []member
 
 	for _, member := range members {
 		req, err := http.NewRequest(
 			"GET",
-			fmt.Sprintf("%s/%s.keys", githubUrl, member.Login),
+			fmt.Sprintf("%s/%s.keys", githubURL, member.Login),
 			nil,
 		)
 		if err != nil {
@@ -74,17 +74,17 @@ func getKeys(members []Member) {
 	}
 }
 
-func getMembers() []Member {
+func getMembers() []member {
 	page := 1
 
-	var members []Member
+	var members []member
 
 	for {
 		client := &http.Client{}
 
 		req, err := http.NewRequest(
 			"GET",
-			fmt.Sprintf("%s/%s/members?filter=all&page=%d", githubOrgsApi, githubOrg, page),
+			fmt.Sprintf("%s/%s/members?filter=all&page=%d", githubOrgsAPI, githubOrg, page),
 			nil,
 		)
 		if err != nil {
@@ -104,7 +104,7 @@ func getMembers() []Member {
 			log.Fatal(err)
 		}
 
-		var ms []Member
+		var ms []member
 
 		err = json.Unmarshal(body, &ms)
 		if err != nil {

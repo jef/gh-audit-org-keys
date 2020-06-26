@@ -30,4 +30,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Pull dependencies
-        run: make lint
+        run: |
+          make install
+          make lint
