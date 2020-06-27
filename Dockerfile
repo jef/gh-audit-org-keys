@@ -1,15 +1,18 @@
 FROM golang:1.14.4-alpine3.12 AS builder
 
-RUN apk update && apk --no-cache add make git
-
 WORKDIR /build
 
 COPY go.mod go.mod
 COPY go.sum go.sum
-COPY main.go main.go
-COPY Makefile Makefile
 
-RUN make production
+RUN go mod download
+
+COPY config.go config.go
+COPY logger.go logger.go
+COPY main.go main.go
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -ldflags="-s -w"
 
 FROM alpine:3.12.0
 
@@ -18,6 +21,6 @@ ENV GITHUB_PAT=""
 
 WORKDIR /opt
 
-COPY --from=builder /build/bin/audit-org-keys audit-org-keys
+COPY --from=builder /build/audit-org-keys audit-org-keys
 
 ENTRYPOINT ["./audit-org-keys"]
