@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 )
 
 const (
@@ -28,50 +29,62 @@ func main() {
 	members := getMembers()
 
 	fmt.Println("getting keys")
+
 	getKeys(members)
 }
 
 func getKeys(members []member) {
-	client := &http.Client{}
-
 	var membersWithNoKey []member
-
+	var wg sync.WaitGroup
+	client := &http.Client{}
 	for _, member := range members {
-		req, err := http.NewRequest(
-			"GET",
-			fmt.Sprintf("%s/%s.keys", githubURL, member.Login),
-			nil,
-		)
-		if err != nil {
-			log.Fatal(err)
-		}
-		req.Header.Add("authorization", fmt.Sprintf("token %s", githubPat))
+		wg.Add(1)
+		member := member
 
-		res, err := client.Do(req)
-		if err != nil {
-			log.Fatal(err)
-		}
+		go func() {
+			defer wg.Done()
 
-		defer res.Body.Close()
+			req, err := http.NewRequest(
+				"GET",
+				fmt.Sprintf("%s/%s.keys", githubURL, member.Login),
+				nil,
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
+			req.Header.Add("authorization", fmt.Sprintf("token %s", githubPat))
 
-		key, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			log.Fatal(err)
-		}
+			res, err := client.Do(req)
+			if err != nil {
+				log.Fatal(err)
+			}
 
-		if len(key) != 0 {
-			fmt.Println(fmt.Sprintf("%s:\n%s", member.Login, key))
-			fmt.Println("-------------------------------------------------------------------------------------")
-			fmt.Println()
-		} else {
-			membersWithNoKey = append(membersWithNoKey, member)
-		}
+			defer res.Body.Close()
+
+			key, err := ioutil.ReadAll(res.Body)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if len(key) != 0 {
+				fmt.Println(fmt.Sprintf("%s:\n%s", member.Login, key))
+			} else {
+				membersWithNoKey = append(membersWithNoKey, member)
+			}
+		}()
 	}
+	wg.Wait()
 
-	fmt.Println(fmt.Sprintf("members with no keys (%d):", len(membersWithNoKey)))
+	fmt.Println(fmt.Sprintf("users with no key (%d):", len(membersWithNoKey)))
 	for _, member := range membersWithNoKey {
-		fmt.Println(fmt.Sprintf("%s", member.Login))
+		wg.Add(1)
+		member := member
+		go func() {
+			defer wg.Done()
+			fmt.Println(member.Login)
+		}()
 	}
+	wg.Wait()
 }
 
 func getMembers() []member {
