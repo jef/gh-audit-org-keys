@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type member struct {
@@ -26,27 +27,20 @@ func main() {
 func printReport(ms []member) {
 	var wg sync.WaitGroup
 
-	withSize := 0
-	withoutSize := 0
-	multipleSize := 0
+	var (
+		withSize uint32
+		withoutSize uint32
+		multipleSize uint32
+	)
 
 	for _, m := range ms {
 		wg.Add(1)
 		m := m
+
 		go func() {
 			defer wg.Done()
-			if len(m.Keys) == 0 {
-				withoutSize++
-				if *showUsers == "without" || *showUsers == "all" {
-					zap.S().Infow("retrieved keys",
-						"user", m.Login,
-						"keys", m.Keys,
-					)
-				}
-			}
-
 			if len(m.Keys) != 0 {
-				withSize++
+				atomic.AddUint32(&withSize, 1)
 				if *showUsers == "with" || *showUsers == "all" {
 					zap.S().Infow("retrieved keys",
 						"user", m.Login,
@@ -55,8 +49,18 @@ func printReport(ms []member) {
 				}
 			}
 
+			if len(m.Keys) == 0 {
+				atomic.AddUint32(&withoutSize, 1)
+				if *showUsers == "without" || *showUsers == "all" {
+					zap.S().Infow("retrieved keys",
+						"user", m.Login,
+						"keys", m.Keys,
+					)
+				}
+			}
+
 			if len(m.Keys) > 1 {
-				multipleSize++
+				atomic.AddUint32(&multipleSize, 1)
 				if *showUsers == "multiple" || *showUsers == "all" {
 					zap.S().Infow("retrieved keys",
 						"user", m.Login,
@@ -133,7 +137,7 @@ func getKeys(ms []member) []member {
 }
 
 func getMembers() []member {
-	page := 1
+	p := 1
 
 	var members []member
 
@@ -142,7 +146,7 @@ func getMembers() []member {
 
 		req, err := http.NewRequest(
 			"GET",
-			fmt.Sprintf("%s/%s/members?filter=all&page=%d", gitHubOrgAPI, gitHubOrg, page),
+			fmt.Sprintf("%s/%s/members?filter=all&page=%d", gitHubOrgAPI, gitHubOrg, p),
 			nil,
 		)
 		if err != nil {
@@ -171,7 +175,7 @@ func getMembers() []member {
 
 		if len(ms) != 0 {
 			members = append(members, ms...)
-			page++
+			p++
 		} else {
 			break
 		}
