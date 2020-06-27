@@ -11,7 +11,7 @@ COPY Makefile Makefile
 
 RUN make production
 
-FROM alpine:3.11
+FROM alpine:3.12.0
 
 ENV GITHUB_ORGANIZATION=""
 ENV GITHUB_PAT=""
