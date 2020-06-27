@@ -15,7 +15,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - name: Build
-        run: make production
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w"
   lint:
     runs-on: ubuntu-latest
     steps:

@@ -9,23 +9,48 @@ Programs like `ssh2john` from **John the Ripper** can best demonstrate how fast 
 ### Requirements
 
 - Go 1.14+ or Docker
-- GitHub Personal Access Token
-- GitHub Organization that you can read
-    - Example: [actions](https://github.com/actions)
 
 ### Running
 
-#### Golang
 ```sh
 export GITHUB_ORGANIZATION=actions
 export GITHUB_PAT=mysecrettoken
 
 # native
-make run
+go build
+./audit-org-keys
+
+# show users with multiple keys
+./audit-org-keys -show-users=multiple
 
 # Docker
-make run-docker
+docker build -t audit-org-keys:local .
+
+docker run --rm -it \
+    --env "GITHUB_ORGANIZATION=$GITHUB_ORGANIZATION" \
+    --env "GITHUB_PAT=$GITHUB_PAT" \
+    audit-org-keys:local
+
+# show users without keys
+docker run --rm -it \
+    --env "GITHUB_ORGANIZATION=$GITHUB_ORGANIZATION" \
+    --env "GITHUB_PAT=$GITHUB_PAT" \
+    audit-org-keys:local -show-users=without
 ```
+
+#### Available arguments
+
+- `-show-users=<filter>`: display users with filter (`all`, `with`, `without`, `multiple`)
+
+#### Available environment variables
+
+- `GITHUB_ORGANIZATION`*: The organization under audit
+- `GITHUB_PAT`*: GitHub Personal Access Token
+    - [Create a PAT](https://github.com/settings/tokens) with `read:org` scope
+    - Some organizations have SSO; if yours does, then you also need to enable it
+- `LOG_LEVEL`: Sets zap log level
+
+> :point_right: Required denoted by `*`
 
 ### Acknowledgments
 

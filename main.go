@@ -3,88 +3,133 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/olekukonko/tablewriter"
+	"go.uber.org/zap"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
-)
-
-const (
-	githubURL     = "https://github.com"
-	githubOrgsAPI = "https://api.github.com/orgs"
-)
-
-var (
-	githubOrg = os.Getenv("GITHUB_ORGANIZATION")
-	githubPat = os.Getenv("GITHUB_PAT")
 )
 
 type member struct {
 	Login string `json:"login"`
+	Keys  []string
 }
 
 func main() {
-	fmt.Println("getting members")
-	members := getMembers()
-
-	fmt.Println("getting keys")
-
-	getKeys(members)
+	ms := getMembers()
+	ms = getKeys(ms)
+	printReport(ms)
 }
 
-func getKeys(members []member) {
-	var membersWithNoKey []member
+func printReport(ms []member) {
+	var wg sync.WaitGroup
+
+	withSize := 0
+	withoutSize := 0
+	multipleSize := 0
+
+	for _, m := range ms {
+		wg.Add(1)
+		m := m
+		go func() {
+			defer wg.Done()
+			if len(m.Keys) == 0 {
+				withoutSize++
+				if *showUsers == "without" || *showUsers == "all" {
+					zap.S().Infow("retrieved keys",
+						"user", m.Login,
+						"keys", m.Keys,
+					)
+				}
+			}
+
+			if len(m.Keys) != 0 {
+				withSize++
+				if *showUsers == "with" || *showUsers == "all" {
+					zap.S().Infow("retrieved keys",
+						"user", m.Login,
+						"keys", m.Keys,
+					)
+				}
+			}
+
+			if len(m.Keys) > 1 {
+				multipleSize++
+				if *showUsers == "multiple" || *showUsers == "all" {
+					zap.S().Infow("retrieved keys",
+						"user", m.Login,
+						"keys", m.Keys,
+					)
+				}
+			}
+			// todo strong and weak keys
+		}()
+	}
+	wg.Wait()
+
+	d := [][]string{
+		{"users with keys", fmt.Sprintf("%d (%.2f%%)", withSize,
+			float32(withSize)/float32(len(ms)) * 100)},
+		{"users without keys", fmt.Sprintf("%d (%.2f%%)", withoutSize,
+			float32(withoutSize)/float32(len(ms)) * 100)},
+		{"users with multiple keys", fmt.Sprintf("%d (%.2f%%)", multipleSize,
+			float32(multipleSize)/float32(len(ms)) * 100)},
+		// todo: calculate bit length of keys
+		//{"users with strong keys", fmt.Sprintf("%d", 0)},
+		//{"users with weak keys", fmt.Sprintf("%d", 0)},
+	}
+
+	t := tablewriter.NewWriter(os.Stdout)
+	t.SetHeader([]string{"description", "# of users"})
+	t.SetHeaderColor(tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor},
+	)
+	t.SetFooter([]string{"total users", fmt.Sprintf("%d", len(ms))})
+
+	t.AppendBulk(d)
+	t.Render()
+}
+
+func getKeys(ms []member) []member {
 	var wg sync.WaitGroup
 	client := &http.Client{}
-	for _, member := range members {
+	for i := 0; i < len(ms); i++ {
 		wg.Add(1)
-		member := member
+		i := i
 
 		go func() {
+			m := &ms[i]
 			defer wg.Done()
 
 			req, err := http.NewRequest(
 				"GET",
-				fmt.Sprintf("%s/%s.keys", githubURL, member.Login),
+				fmt.Sprintf("%s/%s.keys", gitHubURL, m.Login),
 				nil,
 			)
 			if err != nil {
-				log.Fatal(err)
+				zap.S().Fatal(err)
 			}
-			req.Header.Add("authorization", fmt.Sprintf("token %s", githubPat))
 
 			res, err := client.Do(req)
 			if err != nil {
-				log.Fatal(err)
+				zap.S().Fatal(err)
 			}
 
 			defer res.Body.Close()
 
 			key, err := ioutil.ReadAll(res.Body)
 			if err != nil {
-				log.Fatal(err)
-			}
-
-			if len(key) != 0 {
-				fmt.Println(fmt.Sprintf("%s:\n%s", member.Login, key))
-			} else {
-				membersWithNoKey = append(membersWithNoKey, member)
+				zap.S().Fatal(err)
+			} else if (len(key)) != 0 {
+				m.Keys = strings.Split(strings.TrimSpace(string(key)), "\n")
 			}
 		}()
 	}
 	wg.Wait()
 
-	fmt.Println(fmt.Sprintf("users with no key (%d):", len(membersWithNoKey)))
-	for _, member := range membersWithNoKey {
-		wg.Add(1)
-		member := member
-		go func() {
-			defer wg.Done()
-			fmt.Println(member.Login)
-		}()
-	}
-	wg.Wait()
+	return ms
 }
 
 func getMembers() []member {
@@ -97,31 +142,31 @@ func getMembers() []member {
 
 		req, err := http.NewRequest(
 			"GET",
-			fmt.Sprintf("%s/%s/members?filter=all&page=%d", githubOrgsAPI, githubOrg, page),
+			fmt.Sprintf("%s/%s/members?filter=all&page=%d", gitHubOrgAPI, gitHubOrg, page),
 			nil,
 		)
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
-		req.Header.Add("authorization", fmt.Sprintf("token %s", githubPat))
+		req.Header.Add("authorization", fmt.Sprintf("token %s", gitHubPAT))
 
 		res, err := client.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
 
 		defer res.Body.Close()
 
 		body, err := ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
 
 		var ms []member
 
 		err = json.Unmarshal(body, &ms)
 		if err != nil {
-			log.Fatal(err)
+			zap.S().Fatal(err)
 		}
 
 		if len(ms) != 0 {
