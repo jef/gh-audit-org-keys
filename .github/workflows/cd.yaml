@@ -6,10 +6,36 @@ on:
 jobs:
   cd:
     runs-on: ubuntu-latest
+    id: release
     steps:
       - uses: actions/checkout@v2
       - uses: GoogleCloudPlatform/release-please-action@v1.3.2
         with:
-          token: ${{ secrets.JEFBOT_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
           package-name: audit-org-keys
+      - uses: actions/checkout@v2
+      - name: get and set semver
+        run: echo "::set-env name=SEMVER::$(echo version.txt)"
+      - name: login into github package registry
+        run: docker login "docker.pkg.github.com" -u "$GITHUB_ACTOR" -p "$GITHUB_TOKEN"
+      - name: build nightly docker image
+        if: ${{ ! steps.release.outputs.release_created }}
+        run: |
+          docker build \
+          -t "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys:${GITHUB_SHA:0:7}" \
+          -t "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys:nightly" \
+          .
+      - name: publish nightly
+        if: ${{ ! steps.release.outputs.release_created }}
+        run: docker push "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys"
+      - name: build latest docker image
+        if: ${{ steps.release.outputs.release_created }}
+        run: |
+          docker build \
+          -t "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys:$SEMVER" \
+          -t "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys:latest" \
+          .
+      - name: publish latest
+        if: ${{ steps.release.outputs.release_created }}
+        run: docker push "docker.pkg.github.com/${GITHUB_REPOSITORY}/audit-org-keys"
