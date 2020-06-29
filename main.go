@@ -18,30 +18,82 @@ type member struct {
 	Keys  []string
 }
 
-func main() {
-	ms := getMembers()
-	ms = getKeys(ms)
-	printReport(ms)
+type keyTable struct {
+	keyDsaSize              uint32
+	keyEddsaSize            uint32
+	keyEd25519Size          uint32
+	keyRsaSize              uint32
+	userDsaSize             uint32
+	userEddsaSize           uint32
+	userEd25519Size         uint32
+	userRsaSize             uint32
+	userWithKeySize         uint32
+	userWithoutKeySize      uint32
+	userWithMultipleKeySize uint32
+	totalKeySize            uint32
+	totalUserSize           uint32
 }
 
-func printReport(ms []member) {
+func main() {
+	printReport(generateKeyTable(getKeys(getMembers())))
+}
+
+func printReport(kt keyTable) {
+	withKey := [][]string{
+		{"users with keys",
+			"DSA",
+			fmt.Sprintf("%d (%.2f%%)", kt.keyDsaSize, float32(kt.keyDsaSize)/float32(kt.totalKeySize)*100),
+			fmt.Sprintf("%d (%.2f%%)", kt.userDsaSize, float32(kt.userDsaSize)/float32(kt.totalUserSize)*100)},
+		{"",
+			"RSA",
+			fmt.Sprintf("%d (%.2f%%)", kt.keyRsaSize, float32(kt.keyRsaSize)/float32(kt.totalKeySize)*100),
+			fmt.Sprintf("%d (%.2f%%)", kt.userRsaSize, float32(kt.userRsaSize)/float32(kt.totalUserSize)*100)},
+		{"",
+			"ECDSA",
+			fmt.Sprintf("%d (%.2f%%)", kt.keyEddsaSize, float32(kt.keyEddsaSize)/float32(kt.totalKeySize)*100),
+			fmt.Sprintf("%d (%.2f%%)", kt.userEddsaSize, float32(kt.userEddsaSize)/float32(kt.totalUserSize)*100)},
+		{"",
+			"Ed25519",
+			fmt.Sprintf("%d (%.2f%%)", kt.keyEd25519Size, float32(kt.keyEd25519Size)/float32(kt.totalKeySize)*100),
+			fmt.Sprintf("%d (%.2f%%)", kt.userEd25519Size, float32(kt.userEd25519Size)/float32(kt.totalUserSize)*100)},
+	}
+
+	withoutKey := [][]string{
+		{"users without keys",
+			"",
+			"",
+			fmt.Sprintf("%d (%.2f%%)", kt.userWithoutKeySize, float32(kt.userWithoutKeySize)/float32(kt.totalUserSize)*100)},
+	}
+
+	withMultipleKey := [][]string{{"users with multiple keys",
+			"",
+			"",
+			fmt.Sprintf("%d (%.2f%%)", kt.userWithMultipleKeySize, float32(kt.userWithMultipleKeySize)/float32(kt.totalUserSize)*100)},
+	}
+
+	t := tablewriter.NewWriter(os.Stdout)
+	t.SetHeader([]string{"description", "key type", "# of keys", "# of users"})
+	t.SetHeaderColor(tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor})
+	t.SetFooter([]string{"", "total", fmt.Sprintf("%d", kt.totalKeySize), fmt.Sprintf("%d", kt.totalUserSize)})
+	t.SetFooterColor(tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor},
+		tablewriter.Colors{tablewriter.FgCyanColor})
+	t.SetRowLine(true)
+	t.AppendBulk(withKey)
+	t.AppendBulk(withoutKey)
+	t.AppendBulk(withMultipleKey)
+	t.Render()
+}
+
+func generateKeyTable(ms []member) keyTable {
 	var wg sync.WaitGroup
 
-	var (
-		keyDsaSize              uint32
-		keyEddsaSize            uint32
-		keyEd25519Size          uint32
-		keyRsaSize              uint32
-		userDsaSize             uint32
-		userEddsaSize           uint32
-		userEd25519Size         uint32
-		userRsaSize             uint32
-		userWithKeySize         uint32
-		userWithoutKeySize      uint32
-		userWithMultipleKeySize uint32
-		totalKeySize            uint32
-		totalUserSize           = len(ms)
-	)
+	var kt keyTable
+	kt.totalUserSize = uint32(len(ms))
 
 	for _, m := range ms {
 		wg.Add(1)
@@ -58,37 +110,37 @@ func printReport(ms []member) {
 			)
 
 			for _, key := range m.Keys {
-				atomic.AddUint32(&totalKeySize, 1)
+				atomic.AddUint32(&kt.totalKeySize, 1)
 
 				switch {
 				case strings.Contains(key, "ssh-dsa"):
-					atomic.AddUint32(&keyDsaSize, 1)
+					atomic.AddUint32(&kt.keyDsaSize, 1)
 					hasDsa = true
 				case strings.Contains(key, "ssh-rsa"):
-					atomic.AddUint32(&keyRsaSize, 1)
+					atomic.AddUint32(&kt.keyRsaSize, 1)
 					hasRsa = true
 				case strings.Contains(key, "ssh-eddsa"):
-					atomic.AddUint32(&keyEddsaSize, 1)
+					atomic.AddUint32(&kt.keyEddsaSize, 1)
 					hasEddsa = true
 				case strings.Contains(key, "ssh-ed25519"):
-					atomic.AddUint32(&keyEd25519Size, 1)
+					atomic.AddUint32(&kt.keyEd25519Size, 1)
 					hasEd25519 = true
 				}
 			}
 
 			switch {
 			case hasDsa:
-				atomic.AddUint32(&userDsaSize, 1)
+				atomic.AddUint32(&kt.userDsaSize, 1)
 			case hasRsa:
-				atomic.AddUint32(&userRsaSize, 1)
+				atomic.AddUint32(&kt.userRsaSize, 1)
 			case hasEddsa:
-				atomic.AddUint32(&userEddsaSize, 1)
+				atomic.AddUint32(&kt.userEddsaSize, 1)
 			case hasEd25519:
-				atomic.AddUint32(&userEd25519Size, 1)
+				atomic.AddUint32(&kt.userEd25519Size, 1)
 			}
 
 			if len(m.Keys) == 0 {
-				atomic.AddUint32(&userWithoutKeySize, 1)
+				atomic.AddUint32(&kt.userWithoutKeySize, 1)
 				if *showUsers == "without" || *showUsers == "all" {
 					zap.S().Infow("retrieved keys",
 						"user", m.Login,
@@ -98,7 +150,7 @@ func printReport(ms []member) {
 			}
 
 			if len(m.Keys) > 0 {
-				atomic.AddUint32(&userWithKeySize, 1)
+				atomic.AddUint32(&kt.userWithKeySize, 1)
 				if *showUsers == "with" || *showUsers == "all" {
 					zap.S().Infow("retrieved keys",
 						"user", m.Login,
@@ -108,7 +160,7 @@ func printReport(ms []member) {
 			}
 
 			if len(m.Keys) > 1 {
-				atomic.AddUint32(&userWithMultipleKeySize, 1)
+				atomic.AddUint32(&kt.userWithMultipleKeySize, 1)
 				if *showUsers == "multiple" || *showUsers == "all" {
 					zap.S().Infow("retrieved keys",
 						"user", m.Login,
@@ -119,48 +171,8 @@ func printReport(ms []member) {
 		}()
 	}
 	wg.Wait()
-
-	withKey := [][]string{
-		{"users with keys", "DSA",
-			fmt.Sprintf("%d (%.2f%%)", keyDsaSize, float32(keyDsaSize)/float32(totalKeySize)*100),
-			fmt.Sprintf("%d (%.2f%%)", userDsaSize, float32(userDsaSize)/float32(totalUserSize)*100)},
-		{"", "RSA",
-			fmt.Sprintf("%d (%.2f%%)", keyRsaSize, float32(keyRsaSize)/float32(totalKeySize)*100),
-			fmt.Sprintf("%d (%.2f%%)", userRsaSize, float32(userRsaSize)/float32(totalUserSize)*100)},
-		{"", "ECDSA",
-			fmt.Sprintf("%d (%.2f%%)", keyEddsaSize, float32(keyEddsaSize)/float32(totalKeySize)*100),
-			fmt.Sprintf("%d (%.2f%%)", userEddsaSize, float32(userEddsaSize)/float32(totalUserSize)*100)},
-		{"", "Ed25519",
-			fmt.Sprintf("%d (%.2f%%)", keyEd25519Size, float32(keyEd25519Size)/float32(totalKeySize)*100),
-			fmt.Sprintf("%d (%.2f%%)", userEd25519Size, float32(userEd25519Size)/float32(totalUserSize)*100)},
-	}
-
-	withoutKey := [][]string{
-		{"users without keys", "", "", fmt.Sprintf("%d (%.2f%%)", userWithoutKeySize, float32(userWithoutKeySize)/float32(totalUserSize)*100)},
-	}
-
-	withMultipleKey := [][]string{
-		{"users with multiple keys", "", "", fmt.Sprintf("%d (%.2f%%)", userWithMultipleKeySize, float32(userWithMultipleKeySize)/float32(totalUserSize)*100)},
-	}
-
-	t := tablewriter.NewWriter(os.Stdout)
-	t.SetHeader([]string{"description", "key type", "# of keys", "# of users"})
-	t.SetHeaderColor(tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-	)
-	t.SetFooter([]string{"", "total", fmt.Sprintf("%d", totalKeySize), fmt.Sprintf("%d", totalUserSize)})
-	t.SetFooterColor(tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-		tablewriter.Colors{tablewriter.FgCyanColor},
-	)
-	t.SetRowLine(true)
-	t.AppendBulk(withKey)
-	t.AppendBulk(withoutKey)
-	t.AppendBulk(withMultipleKey)
-	t.Render()
+	
+	return kt
 }
 
 func getKeys(ms []member) []member {
