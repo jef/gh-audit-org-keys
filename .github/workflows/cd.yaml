@@ -16,7 +16,7 @@ jobs:
           package-name: audit-org-keys
       - uses: actions/checkout@v2
       - name: get and set semver
-        run: echo "::set-env name=SEMVER::$(echo version.txt)"
+        run: echo "::set-env name=SEMVER::$(cat version.txt)"
       - name: login into github package registry
         run: docker login "docker.pkg.github.com" -u "$GITHUB_ACTOR" -p "${{ secrets.GITHUB_TOKEN }}"
       - name: build nightly docker image
