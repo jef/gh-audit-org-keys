@@ -19,7 +19,7 @@ docker pull docker.pkg.github.com/jef/audit-org-keys/audit-org-keys:<tag>
 docker run --rm -it \
     --env "GITHUB_ORGANIZATION=$GITHUB_ORGANIZATION" \
     --env "GITHUB_PAT=$GITHUB_PAT" \
-    audit-org-keys:<tag>
+    "docker.pkg.github.com/jef/audit-org-keys/audit-org-keys:<tag>"
 ```
 
 > :point_right: View [Available arguments](#available-arguments) and [Available environment variables](#available-environment-variables) below if you'd like to customize input and output
