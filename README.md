@@ -14,8 +14,6 @@ Programs like `ssh2john` from **John the Ripper** can best demonstrate how fast 
 | `nightly` | Built against HEAD; generally considered stable, but could have problems |
 
 ```
-docker pull docker.pkg.github.com/jef/audit-org-keys/audit-org-keys:<tag>
-
 docker run --rm -it \
     --env "GITHUB_ORGANIZATION=$GITHUB_ORGANIZATION" \
     --env "GITHUB_PAT=$GITHUB_PAT" \
