@@ -14,6 +14,9 @@ Programs like `ssh2john` from **John the Ripper** can best demonstrate how fast 
 | `nightly` | Built against HEAD; generally considered stable, but could have problems |
 
 ```
+GITHUB_ORGANIZATION=actions
+GITHUB_PAT=mysecrettoken
+
 docker run --rm -it \
     --env "GITHUB_ORGANIZATION=$GITHUB_ORGANIZATION" \
     --env "GITHUB_PAT=$GITHUB_PAT" \
@@ -31,10 +34,10 @@ docker run --rm -it \
 #### Running
 
 ```sh
-export GITHUB_ORGANIZATION=actions
-export GITHUB_PAT=mysecrettoken
+GITHUB_ORGANIZATION=actions
+GITHUB_PAT=mysecrettoken
 
-# native
+# Golang
 go build
 ./audit-org-keys
 
