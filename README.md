@@ -1,4 +1,4 @@
-# audit-org-keys [![ci](https://github.com/jef/audit-org-keys/workflows/ci/badge.svg)](https://github.com/jef/audit-org-keys/actions?query=workflow%3Aci)
+# audit-org-keys [![ci](https://github.com/jef/audit-org-keys/workflows/ci/badge.svg)](https://github.com/jef/audit-org-keys/actions?query=workflow%3Aci+branch%3Amaster) [![codeql](https://github.com/jef/audit-org-keys/workflows/codeql/badge.svg)](https://github.com/jef/audit-org-keys/actions?query=workflow%3Acodeql+branch%3Amaster)
 
 The point of this project is to help demonstrate that users of GitHub could potentially fall victim to getting their private SSH key cracked. This based on the size and complexity of the key the user generates.
 
