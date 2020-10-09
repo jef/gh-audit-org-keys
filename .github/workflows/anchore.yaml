@@ -12,7 +12,7 @@ jobs:
     - name: build image
       run: docker build . --file Dockerfile --tag localbuild/testimage:latest      
     - name: run anchore scan
-      uses: anchore/scan-action@master
+      uses: anchore/scan-action@v2
       with:
         image-reference: "localbuild/testimage:latest"
         dockerfile-path: "Dockerfile"
