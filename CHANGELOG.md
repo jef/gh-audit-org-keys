@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://www.github.com/jef/audit-org-keys/compare/v1.1.0...v1.2.0) (2021-02-18)
+
+
+### Features
+
+* add anchore ([#25](https://www.github.com/jef/audit-org-keys/issues/25)) ([7da256d](https://www.github.com/jef/audit-org-keys/commit/7da256d400a28afee2b1216eeff5440fe238ffd9))
+* add CodeQL ([29d1488](https://www.github.com/jef/audit-org-keys/commit/29d1488839e624012b2db5f70ed8f4af4aa02a28))
+
+
+### Bug Fixes
+
+* update workflow to use new env var settings ([dd2186b](https://www.github.com/jef/audit-org-keys/commit/dd2186b6243302d9166d69ca4c2a40ea1b40d805))
+
 ## [1.1.0](https://www.github.com/jef/audit-org-keys/compare/v1.0.0...v1.1.0) (2020-07-10)
 
 
