@@ -1,13 +1,14 @@
 name: cd
 on:
   push:
-    branches: [master]
+    branches:
+      - main
 jobs:
   cd:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: GoogleCloudPlatform/release-please-action@v2.19
+      - uses: google-github-actions/release-please-action@v2.19
         id: release
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
