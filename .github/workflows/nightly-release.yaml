@@ -11,11 +11,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
       - name: Login into GitHub Container Registry
-        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        run: echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
       - name: Build Docker image
         run: |
           docker build \
           -t "ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA:0:7}" \
           -t "ghcr.io/${GITHUB_REPOSITORY}:nightly" .
       - name: Release Docker image
-        run: docker push "ghcr.io/${GITHUB_REPOSITORY}"
+        run: |
+          docker push "ghcr.io/${GITHUB_REPOSITORY}:${GITHUB_SHA:0:7}"
+          docker push "ghcr.io/${GITHUB_REPOSITORY}:nightly"
