@@ -14,7 +14,7 @@ COPY main.go main.go
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -ldflags="-s -w"
 
-FROM alpine:3.13.4
+FROM alpine:3.13.5
 
 ENV GITHUB_ORGANIZATION=""
 ENV GITHUB_PAT=""
