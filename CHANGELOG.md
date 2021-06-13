@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://www.github.com/jef/audit-org-keys/compare/v1.2.0...v1.3.0) (2021-06-13)
+
+
+### Features
+
+* use pflag, remove docker, update ci ([#83](https://www.github.com/jef/audit-org-keys/issues/83)) ([45549dc](https://www.github.com/jef/audit-org-keys/commit/45549dc92bce846ab03e991e6f26ea00e17f4677))
+
 ## [1.2.0](https://www.github.com/jef/audit-org-keys/compare/v1.1.0...v1.2.0) (2021-02-18)
 
 
