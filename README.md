@@ -1,4 +1,4 @@
-# audit-org-keys [![Release](https://img.shields.io/github/workflow/status/jef/audit-org-keys/Release?color=24292e&label=Release&logo=github&logoColor=white&style=flat-square)](https://github.com/jef/audit-org-keys/actions/workflows/release.yaml) [![Nightly Release](https://img.shields.io/github/workflow/status/jef/audit-org-keys/Nightly%20Release?color=24292e&label=Nightly%20Release&logo=github&logoColor=white&style=flat-square)](https://github.com/jef/audit-org-keys/actions/workflows/nightly-release.yaml)
+# audit-org-keys [![Release](https://img.shields.io/github/workflow/status/jef/audit-org-keys/Release?color=24292e&label=Release&logo=github&logoColor=white&style=flat-square)](https://github.com/jef/audit-org-keys/actions/workflows/release.yaml)
 
 The point of this project is to help demonstrate that users of GitHub could potentially fall victim to getting their private SSH key cracked. This based on the size and complexity of the key the user generates.
 
