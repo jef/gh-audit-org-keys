@@ -6,7 +6,7 @@ Programs like `ssh2john` from **John the Ripper** can best demonstrate how fast 
 
 ## Installation
 
-`go get -u github.com/jef/audit-org-keys`
+`go get -u github.com/jef/audit-org-keys/cmd/audit_org_keys`
 
 Also available under [GitHub Releases](https://github.com/jef/audit-org-keys/releases) as an executable.
 
