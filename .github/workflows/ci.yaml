@@ -39,6 +39,7 @@ jobs:
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: ${{ runner.os }}-go-
       - name: Lint
-        run: |
-          go get -u golang.org/x/lint/golint
-          golint -set_exit_status
+        uses: golangci/golangci-lint-action@v2
+        with:
+          args: --enable dupl,gofmt,revive
+          skip-go-installation: true

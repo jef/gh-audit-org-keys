@@ -4,9 +4,12 @@ on:
     branches:
       - main
 jobs:
-  build-tag-release:
-    name: Build, tag, and release Docker image
+  release-please:
+    name: Build, tag, and publish assets
     runs-on: ubuntu-latest
+    outputs:
+      release-created: ${{ steps.release.outputs.release_created }}
+      upload-url: ${{ steps.release.outputs.upload_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -16,21 +19,51 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
-          changelog-path: CHANGELOG.md
           package-name: audit-org-keys
-      - name: Login into GitHub Container Registry
-        if: ${{ steps.release.outputs.release_created }}
-        run: echo ${{ secrets.CR_PAT }} | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-      - name: Build Docker image
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          docker build \
-          -t "ghcr.io/${GITHUB_REPOSITORY}:${TAG_NAME}" \
-          -t "ghcr.io/${GITHUB_REPOSITORY}:latest" .
+  build-publish:
+    name: Build and publish assets
+    runs-on: ubuntu-latest
+    needs: release-please
+    if: needs.release-please.outputs.release-created
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Setup Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16'
+      - name: Setup build cache
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: ${{ runner.os }}-go-
+      - name: Build release assets
+        run: make dist
+      - name: Upload Windows asset
+        uses: actions/upload-release-asset@v1
         env:
-          TAG_NAME: ${{ steps.release.outputs.tag_name }}
-      - name: Release Docker image
-        if: ${{ steps.release.outputs.release_created }}
-        run: |
-          docker push "ghcr.io/${GITHUB_REPOSITORY}:${TAG_NAME}"
-          docker push "ghcr.io/${GITHUB_REPOSITORY}:latest"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload-url }}
+          asset_path: ./audit-org-keys-windows-amd64.exe
+          asset_name: audit-org-keys-windows-amd64.exe
+          asset_content_type: application/octet-stream
+      - name: Upload Linux asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload-url }}
+          asset_path: ./audit-org-keys-linux-amd64
+          asset_name: audit-org-keys-linux-amd64
+          asset_content_type: application/octet-stream
+      - name: Upload macOS asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload-url }}
+          asset_path: ./audit-org-keys-darwin-amd64
+          asset_name: audit-org-keys-darwin-amd64
+          asset_content_type: application/octet-stream
