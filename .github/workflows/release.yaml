@@ -5,7 +5,7 @@ on:
       - main
 jobs:
   release-please:
-    name: Build, tag, and publish assets
+    name: Run Release Please
     runs-on: ubuntu-latest
     outputs:
       release-created: ${{ steps.release.outputs.release_created }}
