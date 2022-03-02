@@ -12,7 +12,7 @@ jobs:
       upload-url: ${{ steps.release.outputs.upload_url }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup release please
         uses: google-github-actions/release-please-action@v2
         id: release
@@ -27,7 +27,7 @@ jobs:
     if: needs.release-please.outputs.release-created
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
