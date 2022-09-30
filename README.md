@@ -1,4 +1,4 @@
-# audit-org-keys [![Release](https://img.shields.io/github/workflow/status/jef/audit-org-keys/Release?color=24292e&label=Release&logo=github&logoColor=white&style=flat-square)](https://github.com/jef/audit-org-keys/actions/workflows/release.yaml)
+# gh-audit-org-keys [![Release](https://github.com/jef/gh-audit-org-keys/actions/workflows/release.yaml/badge.svg)](https://github.com/jef/gh-vanity/actions/workflows/release.yaml)
 
 The point of this project is to help demonstrate that users of GitHub could potentially fall victim to getting their private SSH key cracked. This based on the size and complexity of the key the user generates.
 
@@ -6,31 +6,68 @@ Programs like `ssh2john` from **John the Ripper** can best demonstrate how fast 
 
 ## Installation
 
-`go get -u github.com/jef/audit-org-keys/cmd/audit_org_keys`
+1. Install the `gh` cli - see the [installation](https://github.com/cli/cli#installation)
 
-Also available under [GitHub Releases](https://github.com/jef/audit-org-keys/releases) as an executable.
+   _Installation requires a minimum version (2.0.0) of the GitHub CLI that supports extensions._
+
+2. Install this extension:
+
+   ```shell
+   gh extension install jef/gh-audit-org-keys
+   ```
+
+<details>
+<summary><strong>Manual Installation</strong></summary>
+
+Requirements: `cli/cli` and `go`.
+
+1. Clone the repository
+
+   ```shell
+   # git
+   git clone git@github.com:jef/gh-audit-org-keys.git
+
+   # GitHub CLI
+   gh repo clone jef/gh-audit-org-keys
+   ```
+
+2. `cd` into it
+
+   ```shell
+   cd gh-audit-org-keys
+   ```
+
+3. Build it
+
+   ```shell
+   make build
+   ```
+
+4. Install it locally
+
+   ```shell
+   gh extension install .
+   ```
+</details>
 
 ## Usage
 
-It is required that you use a GitHub Personal Access Token (PAT). You can generate one [here](https://github.com/settings/tokens/new). The required scopes are `['read:org']`. Set your PAT to environment variable `GITHUB_TOKEN`. If `GITHUB_TOKEN` isn't set, then you may not get the results you expect.
+To run:
 
 ```shell
-Usage of audit_org_keys:
-  -o, --organization string   [required] GitHub organization provided to inspect
-  -s, --show-users all        display users with filter (all, `with`, `without`, `multiple`)
+gh audit-org-keys
+```
+
+To upgrade:
+
+```sh
+gh extension upgrade audit-org-keys
 ```
 
 ### Examples
 
-- `audit-org-keys --organization="actions"`
-- `audit-org-keys --organization="actions" --show-users="all"`
-
-## Releases
-
-| Tag | Description | 
-|:---:|---|
-| `latest` | Built against tagged releases; stable
-| `nightly` | Built against HEAD; generally considered stable, but could have problems |
+- `gh audit-org-keys --organization="actions"`
+- `gh audit-org-keys --organization="actions" --show-users="all"`
 
 ### Acknowledgments
 

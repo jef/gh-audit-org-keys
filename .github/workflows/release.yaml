@@ -4,66 +4,31 @@ on:
     branches:
       - main
 jobs:
-  release-please:
-    name: Run Release Please
+  release:
+    name: Create release
     runs-on: ubuntu-latest
     outputs:
-      release-created: ${{ steps.release.outputs.release_created }}
-      upload-url: ${{ steps.release.outputs.upload_url }}
+      release_created: ${{ steps.release.outputs.release_created }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup release please
-        uses: google-github-actions/release-please-action@v2
         id: release
+        uses: google-github-actions/release-please-action@v3
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           release-type: simple
-          package-name: audit-org-keys
-  build-publish:
-    name: Build and publish assets
+          package-name: gh-vanity
+  upload_assets:
+    name: Upload assets
     runs-on: ubuntu-latest
-    needs: release-please
-    if: needs.release-please.outputs.release-created
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v2
+        uses: actions/checkout@v3
         with:
-          go-version: '1.16'
-      - name: Setup build cache
-        uses: actions/cache@v2
+          fetch-depth: 0
+      - uses: cli/gh-extension-precompile@v1
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: ${{ runner.os }}-go-
-      - name: Build release assets
-        run: make dist
-      - name: Upload Windows asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release-please.outputs.upload-url }}
-          asset_path: ./audit-org-keys-windows-amd64.exe
-          asset_name: audit-org-keys-windows-amd64.exe
-          asset_content_type: application/octet-stream
-      - name: Upload Linux asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release-please.outputs.upload-url }}
-          asset_path: ./audit-org-keys-linux-amd64
-          asset_name: audit-org-keys-linux-amd64
-          asset_content_type: application/octet-stream
-      - name: Upload macOS asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.release-please.outputs.upload-url }}
-          asset_path: ./audit-org-keys-darwin-amd64
-          asset_name: audit-org-keys-darwin-amd64
-          asset_content_type: application/octet-stream
+          go_version: "1.19"
