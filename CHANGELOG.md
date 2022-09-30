@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/jef/gh-audit-org-keys/compare/v1.3.0...v1.4.0) (2022-09-30)
+
+
+### Features
+
+* become a gh extension ([9fbedb8](https://github.com/jef/gh-audit-org-keys/commit/9fbedb848111dc3f96513aefcbf37e5117440898))
+
 ## [1.3.0](https://www.github.com/jef/audit-org-keys/compare/v1.2.0...v1.3.0) (2021-06-13)
 
 
