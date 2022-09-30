@@ -1,38 +1,30 @@
 package main
 
 import (
-	"encoding/json"
+	_ "embed"
 	"fmt"
-	"io/ioutil"
-	"net/http"
+	"log"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/cli/go-gh"
 	"github.com/olekukonko/tablewriter"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/pflag"
+	"github.com/spf13/cobra"
 )
 
-const (
-	gitHubURL    = "https://github.com"
-	gitHubOrgAPI = "https://api.github.com/orgs"
-)
+//go:embed version.txt
+var Version string
 
-var (
-	gitHubToken = os.Getenv("GITHUB_TOKEN")
-)
+func init() {
+	cobra.OnInitialize()
+}
 
 type member struct {
 	Login string `json:"login"`
 	Keys  []string
-}
-
-type cliOptions struct {
-	ShowUsers string
-	GitHubOrg string
 }
 
 type keyTable struct {
@@ -77,29 +69,34 @@ func printReport(kt keyTable) {
 			fmt.Sprintf("%d (%.2f%%)", kt.keyRsaSize, float32(kt.keyRsaSize)/float32(kt.keySize)*100),
 			fmt.Sprintf("%d (%.2f%%)", kt.userRsaSize, float32(kt.userRsaSize)/float32(kt.userSize)*100)},
 	}
+
 	withoutKey := [][]string{
 		{"users without keys",
 			"",
 			"",
 			fmt.Sprintf("%d (%.2f%%)", kt.userWithoutKeySize, float32(kt.userWithoutKeySize)/float32(kt.userSize)*100)},
 	}
+
 	withMultipleKey := [][]string{{"users with multiple keys",
 		"",
 		"",
 		fmt.Sprintf("%d (%.2f%%)", kt.userWithMultipleKeySize, float32(kt.userWithMultipleKeySize)/float32(kt.userSize)*100)},
 	}
+
 	strongKey := [][]string{
 		{"users with strong keys",
 			"",
 			fmt.Sprintf("%d (%.2f%%)", kt.strongKeySize, float32(kt.strongKeySize)/float32(kt.keySize)*100),
 			fmt.Sprintf("%d (%.2f%%)", kt.userWithStrongKeySize, float32(kt.userWithStrongKeySize)/float32(kt.userWithKeySize)*100)},
 	}
+
 	weakKey := [][]string{
 		{"users with weak keys",
 			"",
 			fmt.Sprintf("%d (%.2f%%)", kt.weakKeySize, float32(kt.weakKeySize)/float32(kt.keySize)*100),
 			fmt.Sprintf("%d (%.2f%%)", kt.userWithWeakKeySize, float32(kt.userWithWeakKeySize)/float32(kt.userWithKeySize)*100)},
 	}
+
 	t := tablewriter.NewWriter(os.Stdout)
 	t.SetHeader([]string{"description", "key type", "# of keys", "# of users"})
 	t.SetHeaderColor(tablewriter.Colors{tablewriter.FgCyanColor},
@@ -118,23 +115,27 @@ func printReport(kt keyTable) {
 	t.AppendBulk(strongKey)
 	t.AppendBulk(weakKey)
 	t.Render()
+
 	if len(kt.userWithWeakKey) > 0 {
-		log.Info().Msg("users with weak keys:")
+		log.Println("users with weak keys:")
 		for _, m := range kt.userWithWeakKey {
-			log.Info().Msgf("%s", m.Login)
+			log.Printf("%s\n", m.Login)
 		}
 	}
 }
 
-func (o cliOptions) generateKeyTable(ms []member) keyTable {
+func generateKeyTable(showUsers string, ms []member) keyTable {
 	var kt keyTable
 	kt.userSize = uint32(len(ms))
 	var wg sync.WaitGroup
+
 	for _, m := range ms {
 		wg.Add(1)
 		m := m
+
 		go func() {
 			defer wg.Done()
+
 			var (
 				hasDsa           bool
 				hasEcdsa         bool
@@ -142,6 +143,7 @@ func (o cliOptions) generateKeyTable(ms []member) keyTable {
 				hasRsa           bool
 				userHasStrongRsa bool
 			)
+
 			for _, key := range m.Keys {
 				atomic.AddUint32(&kt.keySize, 1)
 				switch {
@@ -171,6 +173,7 @@ func (o cliOptions) generateKeyTable(ms []member) keyTable {
 					}
 				}
 			}
+
 			switch {
 			case hasDsa:
 				atomic.AddUint32(&kt.userDsaSize, 1)
@@ -192,110 +195,94 @@ func (o cliOptions) generateKeyTable(ms []member) keyTable {
 					kt.userWithWeakKey = append(kt.userWithWeakKey, m)
 				}
 			}
+
 			if len(m.Keys) == 0 {
 				atomic.AddUint32(&kt.userWithoutKeySize, 1)
-				if o.ShowUsers == "without" || o.ShowUsers == "all" {
-					log.Info().
-						Str("user", m.Login).
-						Strs("keys", m.Keys).
-						Msg("retrieved keys")
+				if showUsers == "without" || showUsers == "all" {
+					log.Printf("retrieved keys for [%s]: %s", m.Login, m.Keys)
 				}
 			}
+
 			if len(m.Keys) > 0 {
 				atomic.AddUint32(&kt.userWithKeySize, 1)
-				if o.ShowUsers == "with" || o.ShowUsers == "all" {
-					log.Info().
-						Str("user", m.Login).
-						Strs("keys", m.Keys).
-						Msg("retrieved keys")
+				if showUsers == "with" || showUsers == "all" {
+					log.Printf("retrieved keys for [%s]: %s", m.Login, m.Keys)
 				}
 			}
+
 			if len(m.Keys) > 1 {
 				atomic.AddUint32(&kt.userWithMultipleKeySize, 1)
-				if o.ShowUsers == "multiple" || o.ShowUsers == "all" {
-					log.Info().
-						Str("user", m.Login).
-						Strs("keys", m.Keys).
-						Msg("retrieved keys")
+				if showUsers == "multiple" || showUsers == "all" {
+					log.Printf("retrieved keys for [%s]: %s", m.Login, m.Keys)
 				}
 			}
 		}()
 	}
+
 	wg.Wait()
+
 	return kt
 }
 
 func isRsaStrong(key string) bool {
 	r := regexp.MustCompile(`(ssh-rsa) (.*)`)
 	keyArray := r.FindStringSubmatch(key)
+
 	return len(keyArray[2]) >= 372
 }
 
 func getKeys(ms []member) []member {
-	client := &http.Client{}
+	client, err := gh.RESTClient(nil)
+	if err != nil {
+		log.Fatalf("failed to create REST client: %v", err)
+	}
+
 	var wg sync.WaitGroup
+
 	for i := 0; i < len(ms); i++ {
 		wg.Add(1)
 		go func(i int) {
 			m := &ms[i]
 			defer wg.Done()
 
-			req, err := http.NewRequest(
-				"GET",
-				fmt.Sprintf("%s/%s.keys", gitHubURL, m.Login),
-				nil,
-			)
-			if err != nil {
-				log.Fatal().Err(err)
+			var KeysT []struct {
+				Id  int    `json:"id"`
+				Key string `json:"key"`
 			}
 
-			res, err := client.Do(req)
+			err = client.Get(fmt.Sprintf("users/%s/keys", m.Login), &KeysT)
 			if err != nil {
-				log.Fatal().Err(err)
+				log.Fatalf("failed to get keys for [%s]: %v", m.Login, err)
 			}
 
-			defer res.Body.Close()
-
-			key, err := ioutil.ReadAll(res.Body)
-			if err != nil {
-				log.Fatal().Err(err)
-			} else if (len(key)) != 0 {
-				m.Keys = strings.Split(strings.TrimSpace(string(key)), "\n")
+			for _, key := range KeysT {
+				m.Keys = append(m.Keys, key.Key)
 			}
 		}(i)
 	}
+
 	wg.Wait()
+
 	return ms
 }
 
-func (o cliOptions) getMembers() []member {
+func getMembers(gitHubOrg string) []member {
+	client, err := gh.RESTClient(nil)
+	if err != nil {
+		log.Fatalf("failed to create REST client: %v", err)
+	}
+
 	p := 1
 	var members []member
+
 	for {
-		client := &http.Client{}
-		req, err := http.NewRequest(
-			"GET",
-			fmt.Sprintf("%s/%s/members?filter=all&page=%d", gitHubOrgAPI, o.GitHubOrg, p),
-			nil,
-		)
-		if err != nil {
-			log.Fatal().Err(err)
-		}
-		req.Header.Add("authorization", fmt.Sprintf("token %s", gitHubToken))
-		res, err := client.Do(req)
-		if err != nil {
-			log.Fatal().Err(err)
-		}
-		defer res.Body.Close()
-		body, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			log.Fatal().Err(err)
-		}
 		var ms []member
-		err = json.Unmarshal(body, &ms)
+
+		err = client.Get(fmt.Sprintf("orgs/%s/members?page=%d&per_page=100", gitHubOrg, p), &ms)
 		if err != nil {
-			log.Fatal().Err(err)
+			log.Fatalf("failed to get members for [%s]: %v", gitHubOrg, err)
 		}
+
 		if len(ms) != 0 {
 			members = append(members, ms...)
 			p++
@@ -303,20 +290,48 @@ func (o cliOptions) getMembers() []member {
 			break
 		}
 	}
+
 	return members
 }
 
+// NewCommand is the root command of gh-vanity.
+func NewCommand() *cobra.Command {
+	var (
+		gitHubOrg string
+		showUsers string
+	)
+
+	var command = &cobra.Command{
+		Use:               "gh-audit-org-keys",
+		Short:             "Audit GitHub organization keys.",
+		DisableAutoGenTag: true,
+		Version:           Version,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			members := getMembers(gitHubOrg)
+			keys := getKeys(members)
+			table := generateKeyTable(showUsers, keys)
+			printReport(table)
+
+			return nil
+		},
+	}
+
+	command.Flags().StringVarP(&gitHubOrg, "organization", "o", "", "GitHub organization provided to inspect.")
+	command.Flags().StringVarP(&showUsers, "show-users", "s", "", "Display users with filter (`all`, `with`, `without`, `multiple`).")
+
+	err := command.MarkFlagRequired("organization")
+	if err != nil {
+		return nil
+	}
+
+	return command
+}
+
 func main() {
-	o := new(cliOptions)
-	pflag.StringVarP(&o.GitHubOrg, "organization", "o", "", "[required] GitHub organization provided to inspect")
-	pflag.StringVarP(&o.ShowUsers, "show-users", "s", "", "display users with filter (`all`, `with`, `without`, `multiple`)")
-	pflag.Parse()
-	if len(pflag.Args()) == 0 {
-		pflag.PrintDefaults()
+	command := NewCommand()
+
+	if err := command.Execute(); err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
-	members := o.getMembers()
-	keys := getKeys(members)
-	table := o.generateKeyTable(keys)
-	printReport(table)
 }
